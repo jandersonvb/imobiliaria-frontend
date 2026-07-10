@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
 const inputStyle = { width: '100%', padding: 12, border: '1px solid #d7dfdc', borderRadius: 9 };
@@ -17,8 +17,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   const [id, setId] = useState('');
   const [token, setToken] = useState('');
   const [property, setProperty] = useState<Property | null>(null);
-  const [imageUrl, setImageUrl] = useState('');
   const [message, setMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     params.then(({ id }) => {
@@ -54,16 +54,32 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     setMessage(response.ok ? 'Imóvel atualizado.' : 'Não foi possível salvar.');
   }
 
-  async function addImage() {
-    if (!imageUrl.trim() || !property) return;
-    const response = await fetch(`${API_URL}/properties/${id}/images`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ url: imageUrl.trim(), sortOrder: property.images.length, isCover: property.images.length === 0 }),
-    });
-    if (response.ok) {
-      const image = await response.json();
-      setProperty({ ...property, images: [...property.images, image] });
-      setImageUrl('');
+  async function uploadImages(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length || !property) return;
+    setUploading(true);
+    setMessage('Enviando imagens...');
+
+    try {
+      const uploaded: ImageItem[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_URL}/properties/${id}/images/upload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!response.ok) throw new Error();
+        uploaded.push(await response.json());
+      }
+      setProperty({ ...property, images: [...property.images, ...uploaded] });
+      setMessage(`${uploaded.length} imagem(ns) enviada(s).`);
+      event.target.value = '';
+    } catch {
+      setMessage('Não foi possível enviar todas as imagens.');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -76,7 +92,6 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   }
 
   if (!property) return <main style={{ padding: 40 }}>{message || 'Carregando...'}</main>;
-
   const field = (key: keyof Property, value: string | number | boolean) => setProperty({ ...property, [key]: value });
 
   return (
@@ -116,9 +131,21 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
       <section style={{ maxWidth: 920, marginTop: 24, background: '#fff', padding: 24, borderRadius: 16 }}>
         <h2>Galeria de imagens</h2>
-        <div style={{ display: 'flex', gap: 10 }}><input style={inputStyle} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL da imagem" /><button type="button" onClick={addImage}>Adicionar</button></div>
+        <p style={{ color: '#62706b' }}>Selecione fotos JPG, PNG ou WebP. Limite de 10 MB por arquivo.</p>
+        <label style={{ display: 'inline-block', padding: '12px 16px', background: '#176b52', color: '#fff', borderRadius: 10, cursor: uploading ? 'wait' : 'pointer', fontWeight: 700 }}>
+          {uploading ? 'Enviando...' : 'Selecionar imagens'}
+          <input type="file" accept="image/*" multiple onChange={uploadImages} disabled={uploading} style={{ display: 'none' }} />
+        </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginTop: 18 }}>
-          {property.images.map((image) => <article key={image.id}><img src={image.url} alt="" style={{ width: '100%', height: 130, objectFit: 'cover', borderRadius: 10 }} /><button type="button" onClick={() => removeImage(image.id)}>Remover</button></article>)}
+          {property.images.map((image) => (
+            <article key={image.id}>
+              <div style={{ position: 'relative' }}>
+                <img src={image.url} alt="" style={{ width: '100%', height: 130, objectFit: 'cover', borderRadius: 10 }} />
+                {image.isCover && <span style={{ position: 'absolute', top: 8, left: 8, background: '#176b52', color: '#fff', padding: '4px 7px', borderRadius: 6, fontSize: 12 }}>Capa</span>}
+              </div>
+              <button type="button" onClick={() => removeImage(image.id)} style={{ marginTop: 8 }}>Remover</button>
+            </article>
+          ))}
         </div>
       </section>
     </main>
