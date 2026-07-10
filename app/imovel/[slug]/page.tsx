@@ -20,6 +20,7 @@ type Property = {
   city: string;
   state: string;
   coverImageUrl?: string;
+  images: { id: string; url: string; isCover: boolean; sortOrder: number }[];
   agency: { name: string; creci?: string; phone?: string; email?: string };
 };
 
@@ -34,6 +35,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
   if (!response.ok) notFound();
   const property = (await response.json()) as Property;
   const price = property.purpose === 'RENT' ? property.rentPrice : property.salePrice;
+  const gallery = property.images?.length
+    ? property.images
+    : property.coverImageUrl
+      ? [{ id: 'cover', url: property.coverImageUrl, isCover: true, sortOrder: 0 }]
+      : [];
 
   return (
     <main style={{ minHeight: '100vh', background: '#f5f7f6' }}>
@@ -43,7 +49,23 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 
       <div style={{ padding: '40px 6vw', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 380px)', gap: 28, alignItems: 'start' }}>
         <section>
-          <div style={{ minHeight: 420, borderRadius: 20, background: property.coverImageUrl ? `url(${property.coverImageUrl}) center/cover` : '#dfe8e4', marginBottom: 24 }} />
+          {gallery.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: gallery.length > 1 ? '2fr 1fr' : '1fr', gap: 12, marginBottom: 24 }}>
+              <img src={gallery[0].url} alt={property.title} style={{ width: '100%', height: 430, objectFit: 'cover', borderRadius: 20 }} />
+              {gallery.length > 1 && (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {gallery.slice(1, 3).map((image) => <img key={image.id} src={image.url} alt="" style={{ width: '100%', height: 209, objectFit: 'cover', borderRadius: 16 }} />)}
+                </div>
+              )}
+            </div>
+          ) : <div style={{ minHeight: 420, borderRadius: 20, background: '#dfe8e4', marginBottom: 24 }} />}
+
+          {gallery.length > 3 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
+              {gallery.slice(3).map((image) => <img key={image.id} src={image.url} alt="" style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 14 }} />)}
+            </div>
+          )}
+
           <p style={{ margin: 0, color: '#176b52', fontWeight: 700 }}>{property.neighborhood} · {property.city}/{property.state}</p>
           <h1 style={{ fontSize: 40, margin: '10px 0' }}>{property.title}</h1>
           <strong style={{ fontSize: 30, color: '#176b52' }}>{money(price)}</strong>
