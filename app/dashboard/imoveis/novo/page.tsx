@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
+import { getStoredSession, type Session } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
 
-type Session = { accessToken: string };
 type Agency = { id: string; name: string };
 
 export default function NewPropertyPage() {
@@ -15,17 +15,16 @@ export default function NewPropertyPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const raw = localStorage.getItem('imobconnect.session');
-    if (!raw) {
+    const stored = getStoredSession();
+    if (!stored) {
       window.location.href = '/login';
       return;
     }
 
-    const parsed = JSON.parse(raw) as Session;
-    setSession(parsed);
+    setSession(stored);
 
     fetch(`${API_URL}/agencies/mine`, {
-      headers: { Authorization: `Bearer ${parsed.accessToken}` },
+      headers: { Authorization: `Bearer ${stored.accessToken}` },
     })
       .then((response) => response.json())
       .then((items: Agency[]) => {
@@ -72,7 +71,7 @@ export default function NewPropertyPage() {
   return (
     <main style={{ minHeight: '100vh', background: '#f5f7f6', padding: '36px 20px' }}>
       <section style={{ maxWidth: 820, margin: '0 auto', background: '#fff', border: '1px solid #e4e9e7', borderRadius: 18, padding: 32 }}>
-        <Link href="/dashboard" style={{ color: '#176b52', fontWeight: 700, textDecoration: 'none' }}>← Voltar ao painel</Link>
+        <Link href="/dashboard/imoveis" style={{ color: '#176b52', fontWeight: 700, textDecoration: 'none' }}>← Voltar aos imóveis</Link>
         <p style={{ color: '#176b52', fontWeight: 800, marginTop: 28 }}>NOVO IMÓVEL</p>
         <h1 style={{ fontSize: 34, margin: '6px 0 24px' }}>{agency ? `Cadastrar em ${agency.name}` : 'Carregando imobiliária...'}</h1>
 

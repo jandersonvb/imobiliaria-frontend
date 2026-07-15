@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { getStoredSession } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
 const inputStyle = { width: '100%', padding: 12, border: '1px solid #d7dfdc', borderRadius: 9 };
@@ -23,11 +24,10 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     params.then(({ id }) => {
       setId(id);
-      const raw = localStorage.getItem('imobconnect.session');
-      if (!raw) return void (window.location.href = '/login');
-      const { accessToken } = JSON.parse(raw);
-      setToken(accessToken);
-      fetch(`${API_URL}/properties/mine/${id}`, { headers: { Authorization: `Bearer ${accessToken}` } })
+      const stored = getStoredSession();
+      if (!stored) return void (window.location.href = '/login');
+      setToken(stored.accessToken);
+      fetch(`${API_URL}/properties/mine/${id}`, { headers: { Authorization: `Bearer ${stored.accessToken}` } })
         .then((r) => r.ok ? r.json() : Promise.reject())
         .then(setProperty)
         .catch(() => setMessage('Não foi possível carregar o imóvel.'));

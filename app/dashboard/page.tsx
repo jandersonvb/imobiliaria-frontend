@@ -2,13 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { clearSession, getStoredSession, type Session } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
-
-type Session = {
-  user: { firstName: string; lastName: string; email: string };
-  accessToken: string;
-};
 
 type Agency = {
   id: string;
@@ -24,21 +20,20 @@ export default function DashboardPage() {
   const [loadingAgency, setLoadingAgency] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem('imobconnect.session');
-    if (!raw) {
+    const stored = getStoredSession();
+    if (!stored) {
       window.location.href = '/login';
       return;
     }
 
-    const parsed = JSON.parse(raw) as Session;
-    setSession(parsed);
+    setSession(stored);
 
     fetch(`${API_URL}/agencies/mine`, {
-      headers: { Authorization: `Bearer ${parsed.accessToken}` },
+      headers: { Authorization: `Bearer ${stored.accessToken}` },
     })
       .then(async (response) => {
         if (response.status === 401) {
-          localStorage.removeItem('imobconnect.session');
+          clearSession();
           window.location.href = '/login';
           return [];
         }
@@ -46,31 +41,21 @@ export default function DashboardPage() {
         return response.json();
       })
       .then((agencies: Agency[]) => setAgency(agencies[0] ?? null))
+      .catch(() => setAgency(null))
       .finally(() => setLoadingAgency(false));
   }, []);
 
-  function logout() {
-    localStorage.removeItem('imobconnect.session');
-    localStorage.removeItem('imobconnect.agency');
-    window.location.href = '/login';
-  }
+  if (!session) return <main style={{ padding: 40 }}>Redirecionando para o login...</main>;
 
-  if (!session) return <main style={{ padding: 40 }}>Carregando...</main>;
-
-  const cards = [
-    ['Imóveis cadastrados', agency?._count.properties ?? 0],
-    ['Leads recebidos', agency?._count.leads ?? 0],
-    ['Membros da equipe', agency?._count.members ?? 0],
-    ['Visitas agendadas', 0],
+  const cards: { label: string; value: number; href?: string }[] = [
+    { label: 'Imóveis cadastrados', value: agency?._count.properties ?? 0, href: '/dashboard/imoveis' },
+    { label: 'Leads recebidos', value: agency?._count.leads ?? 0, href: '/dashboard/leads' },
+    { label: 'Membros da equipe', value: agency?._count.members ?? 0 },
+    { label: 'Visitas agendadas', value: 0 },
   ];
 
   return (
-    <main style={{ minHeight: '100vh', background: '#f5f7f6' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 6vw', background: '#fff', borderBottom: '1px solid #e4e9e7' }}>
-        <Link href="/" style={{ color: '#176b52', fontWeight: 800, textDecoration: 'none', fontSize: 20 }}>ImobConnect</Link>
-        <button onClick={logout} style={{ border: '1px solid #cfd8d4', borderRadius: 9, background: '#fff', padding: '10px 14px', cursor: 'pointer' }}>Sair</button>
-      </header>
-
+    <main>
       <section style={{ padding: '48px 6vw' }}>
         <p style={{ color: '#176b52', fontWeight: 700, margin: 0 }}>PAINEL DA IMOBILIÁRIA</p>
         <h1 style={{ fontSize: 36, margin: '8px 0' }}>Olá, {session.user.firstName}</h1>
@@ -79,12 +64,21 @@ export default function DashboardPage() {
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginTop: 32 }}>
-          {cards.map(([label, value]) => (
-            <article key={label} style={{ background: '#fff', borderRadius: 16, padding: 24, border: '1px solid #e4e9e7' }}>
-              <span style={{ color: '#62706b' }}>{label}</span>
-              <strong style={{ display: 'block', fontSize: 36, marginTop: 10 }}>{value}</strong>
-            </article>
-          ))}
+          {cards.map((card) => {
+            const content = (
+              <article style={{ background: '#fff', borderRadius: 16, padding: 24, border: '1px solid #e4e9e7', height: '100%' }}>
+                <span style={{ color: '#62706b' }}>{card.label}</span>
+                <strong style={{ display: 'block', fontSize: 36, marginTop: 10, color: '#17211b' }}>{card.value}</strong>
+              </article>
+            );
+            return card.href ? (
+              <Link key={card.label} href={card.href} style={{ textDecoration: 'none' }}>
+                {content}
+              </Link>
+            ) : (
+              <div key={card.label}>{content}</div>
+            );
+          })}
         </div>
 
         {!loadingAgency && !agency && (

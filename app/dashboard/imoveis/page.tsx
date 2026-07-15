@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { getStoredSession } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
 
@@ -24,10 +25,9 @@ export default function PropertiesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem('imobconnect.session');
-    if (!raw) return void (window.location.href = '/login');
-    const { accessToken } = JSON.parse(raw);
-    fetch(`${API_URL}/properties/mine`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const stored = getStoredSession();
+    if (!stored) return void (window.location.href = '/login');
+    fetch(`${API_URL}/properties/mine`, { headers: { Authorization: `Bearer ${stored.accessToken}` } })
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then(setItems)
       .catch(() => { window.location.href = '/login'; })

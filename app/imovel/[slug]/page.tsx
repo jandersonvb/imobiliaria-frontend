@@ -43,8 +43,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 
   return (
     <main style={{ minHeight: '100vh', background: '#f5f7f6' }}>
-      <header style={{ padding: '20px 6vw', background: '#fff', borderBottom: '1px solid #e4e9e7' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '20px 6vw', background: '#fff', borderBottom: '1px solid #e4e9e7' }}>
         <Link href="/" style={{ color: '#176b52', fontWeight: 800, textDecoration: 'none', fontSize: 20 }}>ImobConnect</Link>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          <Link href="/#imoveis" style={{ textDecoration: 'none', color: '#38433c' }}>Ver mais imóveis</Link>
+          <Link href="/login" style={{ textDecoration: 'none', color: '#176b52', fontWeight: 700 }}>Área da imobiliária</Link>
+        </nav>
       </header>
 
       <div style={{ padding: '40px 6vw', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 380px)', gap: 28, alignItems: 'start' }}>

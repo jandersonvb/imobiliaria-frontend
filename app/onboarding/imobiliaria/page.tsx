@@ -2,13 +2,9 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
+import { getStoredSession, type Session } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
-
-type Session = {
-  accessToken: string;
-  user: { firstName: string; lastName: string; email: string };
-};
 
 export default function AgencyOnboardingPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -16,12 +12,12 @@ export default function AgencyOnboardingPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const raw = localStorage.getItem('imobconnect.session');
-    if (!raw) {
+    const stored = getStoredSession();
+    if (!stored) {
       window.location.href = '/login';
       return;
     }
-    setSession(JSON.parse(raw) as Session);
+    setSession(stored);
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

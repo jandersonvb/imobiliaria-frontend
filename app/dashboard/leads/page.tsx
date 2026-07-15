@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getStoredSession } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
 const stages = ['NEW', 'CONTACTED', 'QUALIFIED', 'VISIT_SCHEDULED', 'VISITED', 'PROPOSAL_SENT', 'NEGOTIATION', 'WON', 'LOST'];
@@ -23,11 +24,10 @@ export default function LeadsPage() {
   const [token, setToken] = useState('');
 
   useEffect(() => {
-    const raw = localStorage.getItem('imobconnect.session');
-    if (!raw) return void (window.location.href = '/login');
-    const { accessToken } = JSON.parse(raw);
-    setToken(accessToken);
-    fetch(`${API_URL}/leads/mine`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const stored = getStoredSession();
+    if (!stored) return void (window.location.href = '/login');
+    setToken(stored.accessToken);
+    fetch(`${API_URL}/leads/mine`, { headers: { Authorization: `Bearer ${stored.accessToken}` } })
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then(setItems)
       .catch(() => { window.location.href = '/login'; })

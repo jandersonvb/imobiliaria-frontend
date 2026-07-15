@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Building2, MapPin, Search } from 'lucide-react';
 
 const properties = [
@@ -28,15 +29,14 @@ export default function Home() {
   return (
     <main>
       <header className="header container">
-        <a className="brand" href="#">
+        <Link className="brand" href="/">
           <Building2 size={28} />
           <span>ImobConnect</span>
-        </a>
+        </Link>
         <nav>
           <a href="#imoveis">Imóveis</a>
-          <a href="#imobiliarias">Imobiliárias</a>
-          <a href="#como-funciona">Como funciona</a>
-          <button className="outline-button">Entrar</button>
+          <Link href="/cadastro">Para imobiliárias</Link>
+          <Link className="outline-button" href="/login">Entrar</Link>
         </nav>
       </header>
 
@@ -86,7 +86,7 @@ export default function Home() {
             <p className="eyebrow">Seleção especial</p>
             <h2>Imóveis em destaque</h2>
           </div>
-          <a href="#">Ver todos</a>
+          <a href="#imoveis">Ver todos</a>
         </div>
 
         <div className="property-grid">
