@@ -20,6 +20,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   const [property, setProperty] = useState<Property | null>(null);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [managing, setManaging] = useState(false);
 
   useEffect(() => {
     params.then(({ id }) => {
@@ -85,10 +86,88 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
   async function removeImage(imageId: string) {
     if (!property) return;
+    const removed = property.images.find((image) => image.id === imageId);
     const response = await fetch(`${API_URL}/properties/${id}/images/${imageId}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     });
-    if (response.ok) setProperty({ ...property, images: property.images.filter((image) => image.id !== imageId) });
+    if (response.ok) {
+      const remaining = property.images.filter((image) => image.id !== imageId);
+      if (removed?.isCover && remaining[0]) remaining[0] = { ...remaining[0], isCover: true };
+      setProperty({ ...property, images: remaining });
+      setMessage('Imagem removida.');
+    } else {
+      setMessage('Não foi possível remover a imagem.');
+    }
+  }
+
+  async function setCover(imageId: string) {
+    if (!property) return;
+    setManaging(true);
+    const response = await fetch(`${API_URL}/properties/${id}/images/${imageId}/cover`, {
+      method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      setProperty({ ...property, images: await response.json() });
+      setMessage('Foto de capa atualizada.');
+    } else {
+      setMessage('Não foi possível definir a capa.');
+    }
+    setManaging(false);
+  }
+
+  async function moveImage(index: number, direction: -1 | 1) {
+    if (!property) return;
+    const destination = index + direction;
+    if (destination < 0 || destination >= property.images.length) return;
+    const images = [...property.images];
+    [images[index], images[destination]] = [images[destination], images[index]];
+    const ordered = images.map((image, sortOrder) => ({ ...image, sortOrder }));
+    setProperty({ ...property, images: ordered });
+    setManaging(true);
+    const response = await fetch(`${API_URL}/properties/${id}/images/order`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ images: ordered.map(({ id, sortOrder }) => ({ id, sortOrder })) }),
+    });
+    if (response.ok) {
+      setProperty({ ...property, images: await response.json() });
+      setMessage('Ordem das fotos atualizada.');
+    } else {
+      setProperty(property);
+      setMessage('Não foi possível reordenar as fotos.');
+    }
+    setManaging(false);
+  }
+
+  async function toggleArchive() {
+    if (!property) return;
+    const archived = property.status === 'INACTIVE';
+    setManaging(true);
+    const response = await fetch(`${API_URL}/properties/${id}/${archived ? 'activate' : 'archive'}`, {
+      method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      const updated = await response.json();
+      setProperty({ ...property, status: updated.status });
+      setMessage(archived ? 'Imóvel reativado e publicado.' : 'Imóvel arquivado.');
+    } else {
+      setMessage('Não foi possível alterar a disponibilidade.');
+    }
+    setManaging(false);
+  }
+
+  async function deleteProperty() {
+    if (!property || !window.confirm(`Excluir definitivamente "${property.title}"? Os leads serão preservados, mas as fotos serão removidas.`)) return;
+    setManaging(true);
+    const response = await fetch(`${API_URL}/properties/${id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      window.location.href = '/dashboard/imoveis';
+      return;
+    }
+    setMessage('Não foi possível excluir o imóvel.');
+    setManaging(false);
   }
 
   if (!property) return <main style={{ padding: 40 }}>{message || 'Carregando...'}</main>;
@@ -137,15 +216,33 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           <input type="file" accept="image/*" multiple onChange={uploadImages} disabled={uploading} style={{ display: 'none' }} />
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginTop: 18 }}>
-          {property.images.map((image) => (
+          {property.images.map((image, index) => (
             <article key={image.id}>
               <div style={{ position: 'relative' }}>
                 <img src={image.url} alt="" style={{ width: '100%', height: 130, objectFit: 'cover', borderRadius: 10 }} />
                 {image.isCover && <span style={{ position: 'absolute', top: 8, left: 8, background: '#176b52', color: '#fff', padding: '4px 7px', borderRadius: 6, fontSize: 12 }}>Capa</span>}
               </div>
-              <button type="button" onClick={() => removeImage(image.id)} style={{ marginTop: 8 }}>Remover</button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {!image.isCover && <button disabled={managing} type="button" onClick={() => setCover(image.id)}>Usar como capa</button>}
+                <button disabled={managing || index === 0} type="button" onClick={() => moveImage(index, -1)} aria-label="Mover foto para a esquerda">←</button>
+                <button disabled={managing || index === property.images.length - 1} type="button" onClick={() => moveImage(index, 1)} aria-label="Mover foto para a direita">→</button>
+                <button disabled={managing} type="button" onClick={() => removeImage(image.id)}>Remover</button>
+              </div>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section style={{ maxWidth: 920, marginTop: 24, background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #f0c9c4' }}>
+        <h2>Disponibilidade e exclusão</h2>
+        <p style={{ color: '#62706b' }}>Arquivar remove o imóvel do portal sem apagar seus dados. A exclusão é permanente.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <button disabled={managing} type="button" onClick={toggleArchive} style={{ padding: '11px 15px' }}>
+            {property.status === 'INACTIVE' ? 'Reativar e publicar' : 'Arquivar imóvel'}
+          </button>
+          <button disabled={managing} type="button" onClick={deleteProperty} style={{ padding: '11px 15px', border: 0, borderRadius: 8, background: '#b42318', color: '#fff', fontWeight: 700 }}>
+            Excluir definitivamente
+          </button>
         </div>
       </section>
     </main>
