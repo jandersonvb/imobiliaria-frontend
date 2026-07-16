@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
-import { getStoredSession } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
+import { getSession } from '@/lib/session';
 const inputStyle = { width: '100%', padding: 12, border: '1px solid #d7dfdc', borderRadius: 9 };
 
 type ImageItem = { id: string; url: string; isCover: boolean; sortOrder: number };
@@ -17,19 +16,16 @@ type Property = {
 
 export default function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const [id, setId] = useState('');
-  const [token, setToken] = useState('');
   const [property, setProperty] = useState<Property | null>(null);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [managing, setManaging] = useState(false);
 
   useEffect(() => {
-    params.then(({ id }) => {
+    params.then(async ({ id }) => {
       setId(id);
-      const stored = getStoredSession();
-      if (!stored) return void (window.location.href = '/login');
-      setToken(stored.accessToken);
-      fetch(`${API_URL}/properties/mine/${id}`, { headers: { Authorization: `Bearer ${stored.accessToken}` } })
+      if (!await getSession()) return void (window.location.href = '/login');
+      apiFetch(`/properties/mine/${id}`)
         .then((r) => r.ok ? r.json() : Promise.reject())
         .then(setProperty)
         .catch(() => setMessage('Não foi possível carregar o imóvel.'));
@@ -50,8 +46,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       neighborhood: property.neighborhood, city: property.city, state: property.state,
       isFeatured: property.isFeatured,
     };
-    const response = await fetch(`${API_URL}/properties/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body),
+    const response = await apiFetch(`/properties/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
     setMessage(response.ok ? 'Imóvel atualizado.' : 'Não foi possível salvar.');
   }
@@ -67,9 +63,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await fetch(`${API_URL}/properties/${id}/images/upload`, {
+        const response = await apiFetch(`/properties/${id}/images/upload`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
         if (!response.ok) throw new Error();
@@ -88,8 +83,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   async function removeImage(imageId: string) {
     if (!property) return;
     const removed = property.images.find((image) => image.id === imageId);
-    const response = await fetch(`${API_URL}/properties/${id}/images/${imageId}`, {
-      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    const response = await apiFetch(`/properties/${id}/images/${imageId}`, {
+      method: 'DELETE',
     });
     if (response.ok) {
       const remaining = property.images.filter((image) => image.id !== imageId);
@@ -104,8 +99,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   async function setCover(imageId: string) {
     if (!property) return;
     setManaging(true);
-    const response = await fetch(`${API_URL}/properties/${id}/images/${imageId}/cover`, {
-      method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
+    const response = await apiFetch(`/properties/${id}/images/${imageId}/cover`, {
+      method: 'PATCH',
     });
     if (response.ok) {
       setProperty({ ...property, images: await response.json() });
@@ -125,9 +120,9 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     const ordered = images.map((image, sortOrder) => ({ ...image, sortOrder }));
     setProperty({ ...property, images: ordered });
     setManaging(true);
-    const response = await fetch(`${API_URL}/properties/${id}/images/order`, {
+    const response = await apiFetch(`/properties/${id}/images/order`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ images: ordered.map(({ id, sortOrder }) => ({ id, sortOrder })) }),
     });
     if (response.ok) {
@@ -144,8 +139,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     if (!property) return;
     const archived = property.status === 'INACTIVE';
     setManaging(true);
-    const response = await fetch(`${API_URL}/properties/${id}/${archived ? 'activate' : 'archive'}`, {
-      method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
+    const response = await apiFetch(`/properties/${id}/${archived ? 'activate' : 'archive'}`, {
+      method: 'PATCH',
     });
     if (response.ok) {
       const updated = await response.json();
@@ -160,8 +155,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   async function deleteProperty() {
     if (!property || !window.confirm(`Excluir definitivamente "${property.title}"? Os leads serão preservados, mas as fotos serão removidas.`)) return;
     setManaging(true);
-    const response = await fetch(`${API_URL}/properties/${id}`, {
-      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    const response = await apiFetch(`/properties/${id}`, {
+      method: 'DELETE',
     });
     if (response.ok) {
       window.location.href = '/dashboard/imoveis';

@@ -17,8 +17,8 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
     return href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
   }
 
-  function logout() {
-    clearSession();
+  async function logout() {
+    await clearSession();
     window.location.href = '/login';
   }
 
@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
             </Link>
           ))}
           <Link href="/" style={{ textDecoration: 'none', color: '#38433c' }}>Ver site</Link>
-          <button onClick={logout} style={{ border: '1px solid #cfd8d4', borderRadius: 9, background: '#fff', padding: '10px 14px', cursor: 'pointer' }}>Sair</button>
+          <button onClick={() => void logout()} style={{ border: '1px solid #cfd8d4', borderRadius: 9, background: '#fff', padding: '10px 14px', cursor: 'pointer' }}>Sair</button>
         </nav>
       </header>
       {children}

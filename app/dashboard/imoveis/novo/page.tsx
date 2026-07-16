@@ -2,40 +2,32 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import { getStoredSession, type Session } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
+import { getSession } from '@/lib/session';
 
 type Agency = { id: string; name: string };
 
 export default function NewPropertyPage() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
   const [agency, setAgency] = useState<Agency | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const stored = getStoredSession();
-    if (!stored) {
-      window.location.href = '/login';
-      return;
-    }
-
-    setSession(stored);
-
-    fetch(`${API_URL}/agencies/mine`, {
-      headers: { Authorization: `Bearer ${stored.accessToken}` },
-    })
-      .then((response) => response.json())
-      .then((items: Agency[]) => {
-        if (!items[0]) window.location.href = '/onboarding/imobiliaria';
-        else setAgency(items[0]);
-      });
+    void (async () => {
+      if (!await getSession()) return void (window.location.href = '/login');
+      setAuthenticated(true);
+      const response = await apiFetch('/agencies/mine');
+      if (!response.ok) return void (window.location.href = '/login');
+      const items = await response.json() as Agency[];
+      if (!items[0]) window.location.href = '/onboarding/imobiliaria';
+      else setAgency(items[0]);
+    })();
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session || !agency) return;
+    if (!authenticated || !agency) return;
 
     setLoading(true);
     setError('');
@@ -50,12 +42,9 @@ export default function NewPropertyPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/properties`, {
+      const response = await apiFetch('/properties', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await response.json();

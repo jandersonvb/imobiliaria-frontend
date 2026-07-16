@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getStoredSession } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
+import { getSession } from '@/lib/session';
 const stageLabels: Record<string, string> = {
   NEW: 'Novo', CONTACTED: 'Em contato', QUALIFIED: 'Qualificado',
   VISIT_SCHEDULED: 'Visita agendada', VISITED: 'Visitou', PROPOSAL_SENT: 'Proposta enviada',
@@ -23,7 +22,6 @@ type LeadResponse = {
 export default function LeadsPage() {
   const [items, setItems] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState('');
   const [stage, setStage] = useState('');
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -32,16 +30,14 @@ export default function LeadsPage() {
   const [savingId, setSavingId] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = useCallback(async (accessToken: string) => {
+  const load = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '20' });
     if (stage) params.set('stage', stage);
     if (appliedSearch) params.set('search', appliedSearch);
 
     try {
-      const response = await fetch(`${API_URL}/leads/mine?${params}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const response = await apiFetch(`/leads/mine?${params}`);
       if (response.status === 401) return void (window.location.href = '/login');
       if (!response.ok) throw new Error();
       const data = await response.json() as LeadResponse;
@@ -55,10 +51,10 @@ export default function LeadsPage() {
   }, [appliedSearch, page, stage]);
 
   useEffect(() => {
-    const stored = getStoredSession();
-    if (!stored) return void (window.location.href = '/login');
-    setToken(stored.accessToken);
-    void load(stored.accessToken);
+    void (async () => {
+      if (!await getSession()) return void (window.location.href = '/login');
+      await load();
+    })();
   }, [load]);
 
   function changeLocal(id: string, field: 'stage' | 'notes', value: string) {
@@ -69,9 +65,9 @@ export default function LeadsPage() {
     setSavingId(lead.id);
     setMessage('');
     try {
-      const response = await fetch(`${API_URL}/leads/${lead.id}`, {
+      const response = await apiFetch(`/leads/${lead.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage: lead.stage, notes: lead.notes ?? '' }),
       });
       if (!response.ok) throw new Error();

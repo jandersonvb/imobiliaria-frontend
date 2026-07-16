@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getStoredSession } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
+import { getSession } from '@/lib/session';
 
 type Property = {
   id: string;
@@ -25,13 +24,18 @@ export default function PropertiesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = getStoredSession();
-    if (!stored) return void (window.location.href = '/login');
-    fetch(`${API_URL}/properties/mine`, { headers: { Authorization: `Bearer ${stored.accessToken}` } })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then(setItems)
-      .catch(() => { window.location.href = '/login'; })
-      .finally(() => setLoading(false));
+    void (async () => {
+      if (!await getSession()) return void (window.location.href = '/login');
+      try {
+        const response = await apiFetch('/properties/mine');
+        if (!response.ok) throw new Error();
+        setItems(await response.json());
+      } catch {
+        window.location.href = '/login';
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   return (

@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
 
 export default function CadastroPage() {
   const [message, setMessage] = useState('');
@@ -18,7 +17,7 @@ export default function CadastroPage() {
     const payload = Object.fromEntries(form.entries());
 
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const response = await apiFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -27,7 +26,6 @@ export default function CadastroPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? 'Não foi possível criar a conta.');
 
-      localStorage.setItem('imobconnect.session', JSON.stringify(data));
       window.location.href = '/dashboard';
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erro inesperado.');

@@ -1,28 +1,25 @@
+import { apiFetch } from './api-client';
+
 export type Session = {
   user: { firstName: string; lastName: string; email: string };
-  accessToken: string;
 };
 
-const SESSION_KEY = 'imobconnect.session';
-
-export function getStoredSession(): Session | null {
-  const raw = localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
-
+export async function getSession(): Promise<Session | null> {
+  localStorage.removeItem('imobconnect.session');
   try {
-    const parsed = JSON.parse(raw) as Session;
-    if (!parsed?.accessToken || !parsed?.user) {
-      localStorage.removeItem(SESSION_KEY);
-      return null;
-    }
-    return parsed;
+    const response = await apiFetch('/auth/me');
+    if (!response.ok) return null;
+    return response.json();
   } catch {
-    localStorage.removeItem(SESSION_KEY);
     return null;
   }
 }
 
-export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem('imobconnect.agency');
+export async function clearSession() {
+  try {
+    await apiFetch('/auth/logout', { method: 'POST' });
+  } finally {
+    localStorage.removeItem('imobconnect.session');
+    localStorage.removeItem('imobconnect.agency');
+  }
 }

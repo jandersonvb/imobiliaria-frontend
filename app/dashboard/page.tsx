@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { clearSession, getStoredSession, type Session } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
+import { getSession, type Session } from '@/lib/session';
 
 type Agency = {
   id: string;
@@ -20,29 +19,23 @@ export default function DashboardPage() {
   const [loadingAgency, setLoadingAgency] = useState(true);
 
   useEffect(() => {
-    const stored = getStoredSession();
-    if (!stored) {
-      window.location.href = '/login';
-      return;
-    }
+    void (async () => {
+      const current = await getSession();
+      if (!current) return void (window.location.href = '/login');
+      setSession(current);
 
-    setSession(stored);
-
-    fetch(`${API_URL}/agencies/mine`, {
-      headers: { Authorization: `Bearer ${stored.accessToken}` },
-    })
-      .then(async (response) => {
-        if (response.status === 401) {
-          clearSession();
-          window.location.href = '/login';
-          return [];
-        }
-        if (!response.ok) throw new Error('Não foi possível carregar a imobiliária.');
-        return response.json();
-      })
-      .then((agencies: Agency[]) => setAgency(agencies[0] ?? null))
-      .catch(() => setAgency(null))
-      .finally(() => setLoadingAgency(false));
+      try {
+        const response = await apiFetch('/agencies/mine');
+        if (response.status === 401) return void (window.location.href = '/login');
+        if (!response.ok) throw new Error();
+        const agencies = await response.json() as Agency[];
+        setAgency(agencies[0] ?? null);
+      } catch {
+        setAgency(null);
+      } finally {
+        setLoadingAgency(false);
+      }
+    })();
   }, []);
 
   if (!session) return <main style={{ padding: 40 }}>Redirecionando para o login...</main>;

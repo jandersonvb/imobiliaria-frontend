@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import { getStoredSession, type Session } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+import { apiFetch } from '@/lib/api-client';
+import { getSession, type Session } from '@/lib/session';
 
 export default function AgencyOnboardingPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -12,12 +11,10 @@ export default function AgencyOnboardingPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const stored = getStoredSession();
-    if (!stored) {
-      window.location.href = '/login';
-      return;
-    }
-    setSession(stored);
+    void getSession().then((current) => {
+      if (!current) window.location.href = '/login';
+      else setSession(current);
+    });
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -31,12 +28,9 @@ export default function AgencyOnboardingPage() {
     const payload = Object.fromEntries(form.entries());
 
     try {
-      const response = await fetch(`${API_URL}/agencies`, {
+      const response = await apiFetch('/agencies', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
