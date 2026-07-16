@@ -13,18 +13,34 @@ export function LeadForm({ propertyId }: { propertyId: string }) {
     setStatus('loading');
     setError('');
     const form = new FormData(event.currentTarget);
+    const email = String(form.get('email') ?? '').trim();
+    const phone = String(form.get('phone') ?? '').trim();
+    if (!email && !phone) {
+      setError('Informe seu e-mail ou WhatsApp.');
+      setStatus('error');
+      return;
+    }
 
-    const response = await fetch(`${API_URL}/leads`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        propertyId,
-        name: form.get('name'),
-        email: form.get('email') || undefined,
-        phone: form.get('phone') || undefined,
-        message: form.get('message') || undefined,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId,
+          name: form.get('name'),
+          email: email || undefined,
+          phone: phone || undefined,
+          message: form.get('message') || undefined,
+          privacyAccepted: form.get('privacyAccepted') === 'on',
+          website: form.get('website') || undefined,
+        }),
+      });
+    } catch {
+      setError('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+      setStatus('error');
+      return;
+    }
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
@@ -42,9 +58,14 @@ export function LeadForm({ propertyId }: { propertyId: string }) {
   return (
     <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
       <input name="name" required minLength={2} placeholder="Seu nome" style={inputStyle} />
-      <input name="email" type="email" placeholder="Seu e-mail" style={inputStyle} />
-      <input name="phone" placeholder="Seu WhatsApp" style={inputStyle} />
+      <input name="email" type="email" placeholder="Seu e-mail" maxLength={254} style={inputStyle} />
+      <input name="phone" placeholder="Seu WhatsApp" minLength={8} maxLength={30} style={inputStyle} />
       <textarea name="message" rows={4} defaultValue="Tenho interesse neste imóvel e gostaria de mais informações." style={inputStyle} />
+      <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-10000px' }} />
+      <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', color: '#46534f', fontSize: 14 }}>
+        <input name="privacyAccepted" type="checkbox" required style={{ marginTop: 3 }} />
+        Autorizo a imobiliária responsável pelo anúncio a entrar em contato pelos dados informados.
+      </label>
       <button disabled={status === 'loading'} style={{ border: 0, borderRadius: 10, padding: 14, background: '#176b52', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
         {status === 'loading' ? 'Enviando...' : 'Tenho interesse'}
       </button>

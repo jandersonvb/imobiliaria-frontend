@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { LeadForm } from './LeadForm';
 
@@ -55,10 +56,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
         <section>
           {gallery.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: gallery.length > 1 ? '2fr 1fr' : '1fr', gap: 12, marginBottom: 24 }}>
-              <img src={gallery[0].url} alt={property.title} style={{ width: '100%', height: 430, objectFit: 'cover', borderRadius: 20 }} />
+              <div style={{ position: 'relative', minHeight: 430 }}>
+                <Image src={gallery[0].url} alt={property.title} fill priority sizes="(max-width: 900px) 100vw, 65vw" style={{ objectFit: 'cover', borderRadius: 20 }} />
+              </div>
               {gallery.length > 1 && (
                 <div style={{ display: 'grid', gap: 12 }}>
-                  {gallery.slice(1, 3).map((image) => <img key={image.id} src={image.url} alt="" style={{ width: '100%', height: 209, objectFit: 'cover', borderRadius: 16 }} />)}
+                  {gallery.slice(1, 3).map((image) => <div key={image.id} style={{ position: 'relative', minHeight: 209 }}><Image src={image.url} alt="" fill sizes="35vw" style={{ objectFit: 'cover', borderRadius: 16 }} /></div>)}
                 </div>
               )}
             </div>
@@ -66,7 +69,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 
           {gallery.length > 3 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
-              {gallery.slice(3).map((image) => <img key={image.id} src={image.url} alt="" style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 14 }} />)}
+              {gallery.slice(3).map((image) => <div key={image.id} style={{ position: 'relative', height: 150 }}><Image src={image.url} alt="" fill sizes="200px" style={{ objectFit: 'cover', borderRadius: 14 }} /></div>)}
             </div>
           )}
 

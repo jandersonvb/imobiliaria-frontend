@@ -14,7 +14,7 @@ export function PropertyCard({ property }: { property: Property }) {
     <article className="property-card">
       <Link className="property-card-link" href={`/imovel/${property.slug}`}>
         <div className="property-image">
-          {property.coverImageUrl ? <Image src={property.coverImageUrl} alt={property.title} fill unoptimized sizes="(max-width: 760px) 100vw, 33vw" /> : <span className="property-placeholder">Sem foto</span>}
+          {property.coverImageUrl ? <Image src={property.coverImageUrl} alt={property.title} fill sizes="(max-width: 760px) 100vw, 33vw" /> : <span className="property-placeholder">Sem foto</span>}
           <span className="property-purpose">{property.purpose === 'RENT' ? 'Aluguel' : property.purpose === 'SEASONAL' ? 'Temporada' : 'Venda'}</span>
         </div>
         <div className="property-content">

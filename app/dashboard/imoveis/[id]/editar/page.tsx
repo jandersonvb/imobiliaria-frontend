@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { getStoredSession } from '@/lib/session';
 
@@ -219,7 +220,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           {property.images.map((image, index) => (
             <article key={image.id}>
               <div style={{ position: 'relative' }}>
-                <img src={image.url} alt="" style={{ width: '100%', height: 130, objectFit: 'cover', borderRadius: 10 }} />
+                <div style={{ position: 'relative', height: 130 }}><Image src={image.url} alt="" fill sizes="220px" style={{ objectFit: 'cover', borderRadius: 10 }} /></div>
                 {image.isCover && <span style={{ position: 'absolute', top: 8, left: 8, background: '#176b52', color: '#fff', padding: '4px 7px', borderRadius: 6, fontSize: 12 }}>Capa</span>}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
