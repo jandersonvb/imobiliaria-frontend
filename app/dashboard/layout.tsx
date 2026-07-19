@@ -8,6 +8,7 @@ const links = [
   { href: '/dashboard', label: 'Painel' },
   { href: '/dashboard/imoveis', label: 'Imóveis' },
   { href: '/dashboard/leads', label: 'Leads' },
+  { href: '/dashboard/equipe', label: 'Equipe' },
 ];
 
 export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {

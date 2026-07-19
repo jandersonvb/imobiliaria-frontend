@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { getSession } from '@/lib/session';
+import Link from 'next/link';
 const stageLabels: Record<string, string> = {
   NEW: 'Novo', CONTACTED: 'Em contato', QUALIFIED: 'Qualificado',
   VISIT_SCHEDULED: 'Visita agendada', VISITED: 'Visitou', PROPOSAL_SENT: 'Proposta enviada',
@@ -13,6 +14,8 @@ type Lead = {
   id: string; name: string; email?: string; phone?: string; message?: string; notes?: string;
   stage: string; createdAt: string;
   property?: { id: string; title: string; code: string; slug: string };
+  assignedMember?: { user: { firstName: string; lastName: string } };
+  _count?: { activities: number; visits: number };
 };
 type LeadResponse = {
   items: Lead[];
@@ -116,6 +119,7 @@ export default function LeadsPage() {
                   {lead.email && <a href={`mailto:${lead.email}`}>{lead.email}</a>}
                 </div>
               </div>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 12, color: '#62706b', fontSize: 14 }}><span>Responsável: {lead.assignedMember ? `${lead.assignedMember.user.firstName} ${lead.assignedMember.user.lastName}` : 'não atribuído'}</span><span>{lead._count?.activities ?? 0} atividade(s)</span><span>{lead._count?.visits ?? 0} visita(s)</span><Link href={`/dashboard/leads/${lead.id}`} style={{ marginLeft: 'auto', color: '#176b52', fontWeight: 700 }}>Abrir oportunidade →</Link></div>
               {lead.message && <p style={{ paddingTop: 14, borderTop: '1px solid #eef2f0', color: '#46534f' }}>{lead.message}</p>}
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 220px) minmax(260px, 1fr) auto', gap: 12, alignItems: 'end', marginTop: 16 }}>
                 <label style={{ display: 'grid', gap: 6 }}>Etapa

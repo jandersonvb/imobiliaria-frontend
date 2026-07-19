@@ -12,11 +12,13 @@ type Agency = {
   members: { role: string }[];
   _count: { properties: number; leads: number; members: number };
 };
+type Metrics = { total: number; newThisMonth: number; won: number; conversionRate: number; pendingActivities: number; upcomingVisits: number };
 
 export default function DashboardPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [agency, setAgency] = useState<Agency | null>(null);
   const [loadingAgency, setLoadingAgency] = useState(true);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -30,6 +32,8 @@ export default function DashboardPage() {
         if (!response.ok) throw new Error();
         const agencies = await response.json() as Agency[];
         setAgency(agencies[0] ?? null);
+        const metricsResponse = await apiFetch('/leads/mine/metrics');
+        if (metricsResponse.ok) setMetrics(await metricsResponse.json() as Metrics);
       } catch {
         setAgency(null);
       } finally {
@@ -42,9 +46,9 @@ export default function DashboardPage() {
 
   const cards: { label: string; value: number; href?: string }[] = [
     { label: 'Imóveis cadastrados', value: agency?._count.properties ?? 0, href: '/dashboard/imoveis' },
-    { label: 'Leads recebidos', value: agency?._count.leads ?? 0, href: '/dashboard/leads' },
+    { label: 'Leads recebidos', value: metrics?.total ?? agency?._count.leads ?? 0, href: '/dashboard/leads' },
     { label: 'Membros da equipe', value: agency?._count.members ?? 0 },
-    { label: 'Visitas agendadas', value: 0 },
+    { label: 'Visitas agendadas', value: metrics?.upcomingVisits ?? 0, href: '/dashboard/leads' },
   ];
 
   return (
@@ -73,6 +77,7 @@ export default function DashboardPage() {
             );
           })}
         </div>
+        {metrics && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12, marginTop: 16 }}><article style={{ background: '#153f31', color: '#fff', padding: 20, borderRadius: 14 }}><small style={{ opacity: .7 }}>Novos neste mês</small><strong style={{ display: 'block', fontSize: 28, marginTop: 8 }}>{metrics.newThisMonth}</strong></article><article style={{ background: '#153f31', color: '#fff', padding: 20, borderRadius: 14 }}><small style={{ opacity: .7 }}>Taxa de conversão</small><strong style={{ display: 'block', fontSize: 28, marginTop: 8 }}>{metrics.conversionRate}%</strong></article><article style={{ background: '#153f31', color: '#fff', padding: 20, borderRadius: 14 }}><small style={{ opacity: .7 }}>Ações pendentes</small><strong style={{ display: 'block', fontSize: 28, marginTop: 8 }}>{metrics.pendingActivities}</strong></article></div>}
 
         {!loadingAgency && !agency && (
           <section style={{ background: '#fff', borderRadius: 16, padding: 28, marginTop: 24, border: '1px solid #e4e9e7' }}>
