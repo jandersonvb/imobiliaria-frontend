@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
+import { getCurrentAgency } from '@/lib/current-agency';
 import { getSession, type Session } from '@/lib/session';
 
 type Agency = {
@@ -31,9 +32,12 @@ export default function DashboardPage() {
         if (response.status === 401) return void (window.location.href = '/login');
         if (!response.ok) throw new Error();
         const agencies = await response.json() as Agency[];
-        setAgency(agencies[0] ?? null);
-        const metricsResponse = await apiFetch('/leads/mine/metrics');
-        if (metricsResponse.ok) setMetrics(await metricsResponse.json() as Metrics);
+        const selectedAgency = getCurrentAgency(agencies);
+        setAgency(selectedAgency);
+        const metricsResponse = selectedAgency
+          ? await apiFetch(`/leads/mine/metrics?agencyId=${encodeURIComponent(selectedAgency.id)}`)
+          : null;
+        if (metricsResponse?.ok) setMetrics(await metricsResponse.json() as Metrics);
       } catch {
         setAgency(null);
       } finally {

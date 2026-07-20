@@ -1,12 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 
 export default function CadastroPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [nextPath, setNextPath] = useState('/dashboard');
+
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next?.startsWith('/') && !next.startsWith('//')) setNextPath(next);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,7 +32,7 @@ export default function CadastroPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? 'Não foi possível criar a conta.');
 
-      window.location.href = '/dashboard';
+      window.location.href = nextPath;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erro inesperado.');
     } finally {
@@ -56,7 +62,7 @@ export default function CadastroPage() {
         </form>
 
         <p style={{ marginBottom: 0, marginTop: 24, color: '#62706b' }}>
-          Já possui conta? <Link href="/login">Entrar</Link>
+          Já possui conta? <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Entrar</Link>
         </p>
       </section>
     </main>

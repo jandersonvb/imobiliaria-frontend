@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
+import { getCurrentAgency } from '@/lib/current-agency';
 import { getSession } from '@/lib/session';
 
 type Member = { id: string; role: string; user: { id: string; firstName: string; lastName: string; email: string; phone?: string } };
@@ -22,7 +23,7 @@ export default function TeamPage() {
     const agencyResponse = await apiFetch('/agencies/mine');
     if (agencyResponse.status === 401) return void (window.location.href = '/login');
     const agencies = await agencyResponse.json() as Agency[];
-    const current = agencies[0]; setAgency(current ?? null);
+    const current = getCurrentAgency(agencies); setAgency(current);
     if (!current) return;
     const response = await apiFetch(`/agencies/${current.id}/members`);
     if (!response.ok) throw new Error();

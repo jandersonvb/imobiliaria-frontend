@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 
 export default function LoginPage() {
@@ -9,6 +9,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [nextPath, setNextPath] = useState('/dashboard');
+
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next?.startsWith('/') && !next.startsWith('//')) setNextPath(next);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,7 +31,7 @@ export default function LoginPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? 'Não foi possível entrar.');
 
-      window.location.href = '/dashboard';
+      window.location.href = nextPath;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erro inesperado.');
     } finally {
@@ -56,7 +62,7 @@ export default function LoginPage() {
         </form>
 
         <p style={{ marginBottom: 0, marginTop: 24, color: '#62706b' }}>
-          Ainda não possui conta? <Link href="/cadastro">Cadastre-se</Link>
+          Ainda não possui conta? <Link href={`/cadastro?next=${encodeURIComponent(nextPath)}`}>Cadastre-se</Link>
         </p>
       </section>
     </main>

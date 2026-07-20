@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
+import { getCurrentAgency } from '@/lib/current-agency';
 import { getSession } from '@/lib/session';
 
 type Property = {
@@ -18,6 +19,7 @@ type Property = {
   rentPrice?: string;
   _count: { leads: number };
 };
+type Agency = { id: string; name: string };
 
 export default function PropertiesPage() {
   const [items, setItems] = useState<Property[]>([]);
@@ -27,7 +29,11 @@ export default function PropertiesPage() {
     void (async () => {
       if (!await getSession()) return void (window.location.href = '/login');
       try {
-        const response = await apiFetch('/properties/mine');
+        const agenciesResponse = await apiFetch('/agencies/mine');
+        if (!agenciesResponse.ok) throw new Error();
+        const agency = getCurrentAgency(await agenciesResponse.json() as Agency[]);
+        if (!agency) return void (window.location.href = '/onboarding/imobiliaria');
+        const response = await apiFetch(`/properties/mine?agencyId=${encodeURIComponent(agency.id)}`);
         if (!response.ok) throw new Error();
         setItems(await response.json());
       } catch {

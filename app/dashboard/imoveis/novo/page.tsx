@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
+import { getCurrentAgency } from '@/lib/current-agency';
 import { getSession } from '@/lib/session';
 
 type Agency = { id: string; name: string };
@@ -20,8 +21,9 @@ export default function NewPropertyPage() {
       const response = await apiFetch('/agencies/mine');
       if (!response.ok) return void (window.location.href = '/login');
       const items = await response.json() as Agency[];
-      if (!items[0]) window.location.href = '/onboarding/imobiliaria';
-      else setAgency(items[0]);
+      const current = getCurrentAgency(items);
+      if (!current) window.location.href = '/onboarding/imobiliaria';
+      else setAgency(current);
     })();
   }, []);
 

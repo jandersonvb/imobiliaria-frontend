@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
+import { getCurrentAgency } from '@/lib/current-agency';
 import { getSession } from '@/lib/session';
 import Link from 'next/link';
 const stageLabels: Record<string, string> = {
@@ -21,6 +22,7 @@ type LeadResponse = {
   items: Lead[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 };
+type Agency = { id: string; name: string; members: { role: string }[] };
 
 export default function LeadsPage() {
   const [items, setItems] = useState<Lead[]>([]);
@@ -32,10 +34,14 @@ export default function LeadsPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [savingId, setSavingId] = useState('');
   const [message, setMessage] = useState('');
+  const [agencyId, setAgencyId] = useState('');
+  const [role, setRole] = useState('');
+  const canEdit = role !== 'ASSISTANT';
 
   const load = useCallback(async () => {
+    if (!agencyId) return;
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    const params = new URLSearchParams({ agencyId, page: String(page), limit: '20' });
     if (stage) params.set('stage', stage);
     if (appliedSearch) params.set('search', appliedSearch);
 
@@ -51,14 +57,23 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, page, stage]);
+  }, [agencyId, appliedSearch, page, stage]);
 
   useEffect(() => {
     void (async () => {
       if (!await getSession()) return void (window.location.href = '/login');
-      await load();
+      const response = await apiFetch('/agencies/mine');
+      if (!response.ok) return setMessage('Não foi possível carregar a imobiliária.');
+      const agency = getCurrentAgency(await response.json() as Agency[]);
+      if (!agency) setLoading(false);
+      setAgencyId(agency?.id ?? '');
+      setRole(agency?.members[0]?.role ?? '');
     })();
-  }, [load]);
+  }, []);
+
+  useEffect(() => {
+    if (agencyId) void load();
+  }, [agencyId, load]);
 
   function changeLocal(id: string, field: 'stage' | 'notes', value: string) {
     setItems((current) => current.map((lead) => lead.id === id ? { ...lead, [field]: value } : lead));
@@ -121,7 +136,7 @@ export default function LeadsPage() {
               </div>
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 12, color: '#62706b', fontSize: 14 }}><span>Responsável: {lead.assignedMember ? `${lead.assignedMember.user.firstName} ${lead.assignedMember.user.lastName}` : 'não atribuído'}</span><span>{lead._count?.activities ?? 0} atividade(s)</span><span>{lead._count?.visits ?? 0} visita(s)</span><Link href={`/dashboard/leads/${lead.id}`} style={{ marginLeft: 'auto', color: '#176b52', fontWeight: 700 }}>Abrir oportunidade →</Link></div>
               {lead.message && <p style={{ paddingTop: 14, borderTop: '1px solid #eef2f0', color: '#46534f' }}>{lead.message}</p>}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 220px) minmax(260px, 1fr) auto', gap: 12, alignItems: 'end', marginTop: 16 }}>
+              {canEdit && <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 220px) minmax(260px, 1fr) auto', gap: 12, alignItems: 'end', marginTop: 16 }}>
                 <label style={{ display: 'grid', gap: 6 }}>Etapa
                   <select value={lead.stage} onChange={(e) => changeLocal(lead.id, 'stage', e.target.value)} style={inputStyle}>
                     {Object.entries(stageLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
@@ -131,7 +146,7 @@ export default function LeadsPage() {
                   <textarea value={lead.notes ?? ''} maxLength={5000} onChange={(e) => changeLocal(lead.id, 'notes', e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
                 </label>
                 <button disabled={savingId === lead.id} onClick={() => void save(lead)} style={primaryButton}>{savingId === lead.id ? 'Salvando...' : 'Salvar'}</button>
-              </div>
+              </div>}
             </article>
           ))}
         </div>
